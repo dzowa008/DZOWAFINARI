@@ -1,0 +1,4 @@
+# SmartaAIdzowa
+# DzowaAInotes
+# DzowaAInotesAPP
+# DzowaAInotesAPP
