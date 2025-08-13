@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Document, Page, pdfjs } from 'react-pdf';
 import {
   X, Star, Edit3, Download, Copy, ZoomIn, ZoomOut, FileText,
   Calendar, Tag, MessageCircle, Send, Bot, Minimize2,
@@ -32,6 +33,16 @@ function DocumentViewer({ note, onClose, onToggleStar, onEdit, onSave }: Documen
   const [isPaused, setIsPaused] = useState(false);
   const synthRef = React.useRef<SpeechSynthesis | null>(null);
   const utteranceRef = React.useRef<SpeechSynthesisUtterance | null>(null);
+
+  // PDF upload & display
+  const [uploadedPDF, setUploadedPDF] = useState<File|null>(null);
+  const [pdfData, setPdfData] = useState<string|ArrayBuffer|null>(null);
+  const [numPages, setNumPages] = useState<number|null>(null);
+  const [pdfPage, setPdfPage] = useState<number>(1);
+
+  useEffect(() => {
+    pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
+  }, []);
 
   useEffect(() => {
     synthRef.current = window.speechSynthesis;
@@ -364,8 +375,8 @@ function DocumentViewer({ note, onClose, onToggleStar, onEdit, onSave }: Documen
   return (
     <div className="fixed inset-0 bg-white dark:bg-gray-900 z-50 flex flex-col">
       {/* Document Header */}
-      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-        <div className="flex items-center justify-between">
+      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-3 py-4 md:px-6">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
           <div className="flex items-center space-x-4">
             <button
               onClick={onClose}
@@ -373,7 +384,24 @@ function DocumentViewer({ note, onClose, onToggleStar, onEdit, onSave }: Documen
             >
               <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             </button>
-            
+            {/* PDF Upload Button */}
+            <label className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors cursor-pointer">
+              <input
+                type="file"
+                accept="application/pdf"
+                style={{ display: 'none' }}
+                onChange={e => {
+                  const file = e.target.files && e.target.files[0];
+                  if (file) {
+                    setUploadedPDF(file);
+                    const reader = new FileReader();
+                    reader.onload = () => setPdfData(reader.result);
+                    reader.readAsArrayBuffer(file);
+                  }
+                }}
+              />
+              <span role="img" aria-label="Upload PDF">📄</span>
+            </label>
             <div className="flex items-center space-x-3">
               <FileText className="w-6 h-6 text-purple-600 dark:text-purple-400" />
               <div>
@@ -527,11 +555,11 @@ function DocumentViewer({ note, onClose, onToggleStar, onEdit, onSave }: Documen
       </div>
 
       {/* Document Content */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Main Content Area */}
-        <div className={`flex-1 flex flex-col ${showAIAssistant && !aiMinimized ? 'w-2/3' : 'w-full'} transition-all duration-300`}>
+        <div className={`flex-1 flex flex-col w-full ${showAIAssistant && !aiMinimized ? 'md:w-2/3' : 'md:w-full'} transition-all duration-300`}>
           <div className="flex-1 overflow-y-auto">
-            <div className="max-w-4xl mx-auto px-6 py-8">
+            <div className="w-full max-w-4xl mx-auto px-2 sm:px-4 md:px-6 py-4 md:py-8">
               {/* Metadata Panel */}
               {showMetadata && (
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-6 border border-gray-200 dark:border-gray-700">
@@ -580,9 +608,50 @@ function DocumentViewer({ note, onClose, onToggleStar, onEdit, onSave }: Documen
                 </div>
               )}
 
-              {/* Content */}
+              {/* Content (PDF or Note) */}
               <div className="prose prose-lg max-w-none dark:prose-invert">
-                {isEditing ? (
+                {uploadedPDF && pdfData ? (
+                  <div className="flex flex-col items-center w-full">
+                    <div className="mb-4 truncate text-center w-full px-2">Viewing: <strong>{uploadedPDF.name}</strong></div>
+                    <div className="w-full flex justify-center">
+                      <Document
+                        file={pdfData}
+                        onLoadSuccess={({ numPages }) => { setNumPages(numPages); setPdfPage(1); }}
+                        onLoadError={err => <div className="text-red-500">Error loading PDF: {err.message}</div>}
+                        onSourceError={err => <div className="text-red-500">PDF source error: {err.message}</div>}
+                      >
+                        <Page
+                          pageNumber={pdfPage}
+                          width={typeof window !== "undefined" ? Math.min(window.innerWidth-32, 650) : 320}
+                          renderTextLayer={true}
+                          renderAnnotationLayer={true}
+                          onRenderError={err => <div className="text-red-500">Error rendering page: {err.message}</div>}
+                        />
+                      </Document>
+                    </div>
+                    <div className="flex flex-wrap gap-2 items-center justify-center mt-2 text-sm">
+                      <button 
+                        className="px-2 py-1 border rounded disabled:opacity-60"
+                        disabled={pdfPage <= 1} onClick={() => setPdfPage(p => Math.max(p - 1, 1))}>Previous</button>
+                      <span>Page {pdfPage} of {numPages}</span>
+                      <button 
+                        className="px-2 py-1 border rounded disabled:opacity-60"
+                        disabled={pdfPage >= (numPages || 1)} onClick={() => setPdfPage(p => Math.min(p + 1, numPages || 1))}>Next</button>
+                      <input
+                        type="number"
+                        min={1}
+                        max={numPages || 1}
+                        value={pdfPage}
+                        onChange={e => {
+                          let page = Number(e.target.value);
+                          if (page >= 1 && page <= (numPages || 1)) setPdfPage(page);
+                        }}
+                        className="ml-2 w-16 p-1 border rounded text-center"
+                        title="Jump to page"
+                      />
+                    </div>
+                  </div>
+                ) : isEditing ? (
                   <textarea
                     value={editedContent}
                     onChange={(e) => setEditedContent(e.target.value)}
@@ -602,8 +671,8 @@ function DocumentViewer({ note, onClose, onToggleStar, onEdit, onSave }: Documen
 
         {/* AI Assistant Panel */}
         {showAIAssistant && (
-          <div className={`bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 flex flex-col transition-all duration-300 ${
-            aiMinimized ? 'w-12' : 'w-1/3'
+          <div className={`bg-white dark:bg-gray-900 border-t md:border-t-0 md:border-l border-gray-200 dark:border-gray-700 flex flex-col transition-all duration-300 w-full ${
+            aiMinimized ? 'md:w-12' : 'md:w-1/3'
           }`}>
             {/* AI Header */}
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
