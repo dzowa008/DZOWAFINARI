@@ -130,11 +130,18 @@ export default function AudioRecorder({
   };
 
   const handleSaveEdit = (note: Note) => {
-    // Save transcription and title
-    onEditAudioNote && onEditAudioNote({ ...note, title: editTitle, transcription: editTrans });
-    // Save tags separately to handle array conversion
-    const tags = editTags.split(',').map(t => t.trim()).filter(Boolean);
-    onEditAudioNote && onEditAudioNote({ ...note, tags });
+    if (onEditAudioNote) {
+      const tags = editTags.split(',').map(t => t.trim()).filter(Boolean);
+      const updatedNote = { 
+        ...note, 
+        title: editTitle, 
+        transcription: editTrans,
+        content: editTrans, // Update content with transcription
+        tags,
+        updatedAt: new Date()
+      };
+      onEditAudioNote(updatedNote);
+    }
     setEditingId(null);
   };
 

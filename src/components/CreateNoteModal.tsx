@@ -220,58 +220,49 @@ function CreateNoteModal({ isOpen, onClose, onCreateNote, title, setTitle, conte
     
     try {
       let prompt = '';
-      let aiMessage = '';
       
       switch (action) {
         case 'improve':
-          prompt = `Please improve this note by enhancing clarity, flow, and structure:\n\nTitle: ${title}\nContent: ${content}`;
-          aiMessage = 'I\'ve enhanced your note with better structure and clarity!';
+          prompt = `Please improve this note by enhancing clarity, flow, and structure. Make it more engaging and well-organized:\n\nTitle: ${title}\nContent: ${content}`;
           break;
         case 'summarize':
-          prompt = `Please create a concise summary of this note:\n\nTitle: ${title}\nContent: ${content}`;
-          aiMessage = 'I\'ve created a summary of your note!';
+          prompt = `Create a concise, informative summary of this note that captures the key points:\n\nTitle: ${title}\nContent: ${content}`;
           break;
         case 'expand':
-          prompt = `Please expand this note with more details, examples, and context:\n\nTitle: ${title}\nContent: ${content}`;
-          aiMessage = 'I\'ve added more details and context to your note!';
+          prompt = `Expand this note with more details, examples, and relevant context. Add depth while maintaining clarity:\n\nTitle: ${title}\nContent: ${content}`;
           break;
         case 'structure':
-          prompt = `Please reorganize this note with clear headings and better structure:\n\nTitle: ${title}\nContent: ${content}`;
-          aiMessage = 'I\'ve reorganized your note with a clear structure!';
+          prompt = `Reorganize this note with clear headings, bullet points, and logical structure. Make it easy to scan and understand:\n\nTitle: ${title}\nContent: ${content}`;
           break;
         default:
-          prompt = `Please help improve this note:\n\nTitle: ${title}\nContent: ${content}`;
-          aiMessage = 'I\'ve helped improve your note!';
+          prompt = `Help improve this note in any way you think would be beneficial:\n\nTitle: ${title}\nContent: ${content}`;
       }
       
       const aiResponse = await callAIService(prompt, chatMessages);
       
-      // For content actions, update the note content
-      if (['improve', 'expand', 'structure'].includes(action)) {
+      // For content actions, update the note content directly
+      if (['improve', 'expand', 'structure', 'summarize'].includes(action)) {
         setContent(aiResponse);
-      } else if (action === 'summarize') {
-        setContent(`## Summary\n\n${aiResponse}\n\n---\n\n${content}`);
       }
       
-      // Add AI message about the action
+      // Add confirmation message to chat
       const actionMessage: ChatMessage = {
         id: Date.now().toString(),
         type: 'ai',
-        content: aiMessage,
+        content: `✅ I've ${action}d your note! The content has been updated. Feel free to make further adjustments or ask for more help.`,
         timestamp: new Date(),
-        suggestions: ['Make more changes', 'Add examples', 'Improve further', 'I\'m satisfied']
+        suggestions: ['✨ Improve further', '📝 Add examples', '🔄 Try different approach', '✅ Looks good']
       };
       setChatMessages(prev => [...prev, actionMessage]);
       
     } catch (error) {
       console.error('Quick action error:', error);
-      // Fallback to simple improvement
       const fallbackMessage: ChatMessage = {
         id: Date.now().toString(),
         type: 'ai',
-        content: `⚠️ I encountered an issue, but I can still help! Try asking me directly what you'd like to improve about your note.`,
+        content: `⚠️ I encountered an issue while ${action}ing your note. The AI service might be temporarily unavailable. Try asking me directly what you'd like to improve!`,
         timestamp: new Date(),
-        suggestions: ['Try again', 'Ask for help', 'Manual edit']
+        suggestions: ['🔄 Try again', '💬 Ask for help', '✏️ Manual edit', '🤖 Check AI status']
       };
       setChatMessages(prev => [...prev, fallbackMessage]);
     } finally {

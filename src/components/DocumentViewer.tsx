@@ -166,17 +166,13 @@ function DocumentViewer({ note, onClose, onToggleStar, onEdit, onSave }: Documen
       
       setChatMessages(prev => [...prev, aiMessage]);
       
-      // Show error if API failed but fallback was used
-      if (response.error) {
-        console.warn('AI API error, using fallback:', response.error);
-      }
     } catch (error) {
       console.error('Failed to get AI response:', error);
       
       // Fallback error message
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        content: '🚫 Sorry, I\'m having trouble responding right now. Please try again in a moment.',
+        content: '🤖 I\'m having trouble connecting to the AI service right now. Please try again in a moment, or check your internet connection.',
         type: 'ai',
         timestamp: new Date()
       };

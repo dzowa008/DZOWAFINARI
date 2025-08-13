@@ -15,6 +15,9 @@ export interface Note {
   fileUrl?: string; // URL for preview/download of uploaded files
   sourceFile?: string; // Original filename for extracted notes
   extractedFrom?: string; // Description of extraction source
+  pinned?: boolean; // For pinning important notes
+  metadata?: Record<string, any>; // Additional metadata
+  timestamp?: Date; // Legacy support
 }
 
 export interface ChatMessage {
@@ -26,8 +29,10 @@ export interface ChatMessage {
 
 export interface UserProfile {
   id: string;
+  email?: string;
   full_name: string;
   avatar_url?: string;
   bio?: string;
   created_at: string;
+  updated_at?: string;
 }

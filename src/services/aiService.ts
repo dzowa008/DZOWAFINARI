@@ -12,9 +12,9 @@ class AIService {
   protected apiKey: string;
   protected baseUrl: string = 'https://openrouter.ai/api/v1';
   protected models: string[] = [
-    'qwen/qwen3-coder:free',
-    'google/gemini-2.0-flash-exp:free',
     'deepseek/deepseek-chat-v3-0324:free',
+    'google/gemini-2.0-flash-exp:free',
+    'qwen/qwen3-coder:free',
     'microsoft/phi-3-mini-128k-instruct:free',
     'mistralai/mistral-7b-instruct:free',
     'meta-llama/llama-3.2-3b-instruct:free',

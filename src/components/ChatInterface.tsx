@@ -43,7 +43,13 @@ function ChatInterface({
         </div>
         <div>
           <h2 className="text-xl font-semibold text-white">AI Assistant</h2>
-          <p className="text-gray-400 text-sm">Ask questions about your notes</p>
+          <p className="text-gray-400 text-sm">Powered by advanced AI • Ask anything about your notes</p>
+        </div>
+        <div className="ml-auto">
+          <div className="flex items-center space-x-2 px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-xs">
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+            <span>Online</span>
+          </div>
         </div>
       </header>
 
