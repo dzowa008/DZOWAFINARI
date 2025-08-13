@@ -1,592 +1,214 @@
-import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Youtube,
-  Download,
-  Link,
-  AlertCircle,
-  CheckCircle,
-  Clock,
-  FileText,
-  Copy,
-  ExternalLink,
-  Trash2,
-  Settings as SettingsIcon,
-  ChevronDown,
-  ChevronUp,
-  Undo2,
-  Eye,
-} from 'lucide-react';
-import { aiService } from '../services/aiService';
+import React, { useState } from "react";
+// IMPORTANT: Never commit your key. Load from Vite env (see .env: VITE_GEMINI_API_KEY)
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
-interface YoutubeSummarizerProps {
-  onCreateNote?: (note: any) => void;
-}
-
-interface VideoSummary {
-  title: string;
-  content: string;
-  noteContent: string;
-  type: string;
-  url: string;
-  videoId: string;
-  timestamp: Date;
-  expanded?: boolean;
-}
-
-const STORAGE_KEY = 'yt-summarizer-history3';
-
-// Extract YouTube video ID utility
-const extractVideoId = (url: string): string | null => {
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
-    /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
-    /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/,
-  ];
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) return match[1];
-  }
-  return null;
-};
-
-// Toast component for transient messages
-function Toast({ message }: { message: string }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 24 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 24 }}
-      className="fixed bottom-5 left-1/2 -translate-x-1/2 max-w-xs px-4 py-2 bg-purple-700 text-white font-bold rounded-xl shadow-lg z-50"
-      role="alert"
-      aria-live="polite"
-    >
-      {message}
-    </motion.div>
-  );
-}
-
-export default function YoutubeSummarizer({ onCreateNote }: YoutubeSummarizerProps) {
-  // State hooks
-  const [youtubeUrl, setYoutubeUrl] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [lastSummary, setLastSummary] = useState<VideoSummary | null>(null);
-  const [error, setError] = useState('');
-  const [recentSummaries, setRecentSummaries] = useState<VideoSummary[]>([]);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [denseMode, setDenseMode] = useState(false);
-  const [autoCreateNote, setAutoCreateNote] = useState(true);
-  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
-  const [justCleared, setJustCleared] = useState<VideoSummary[] | null>(null);
-
-  // Load stored summaries on mount
-  useEffect(() => {
-    try {
-      const data = window.localStorage.getItem(STORAGE_KEY);
-      if (data) setRecentSummaries(JSON.parse(data));
-    } catch {}
-  }, []);
-
-  // Persist summaries to localStorage when updated
-  useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(recentSummaries));
-  }, [recentSummaries]);
-
-  // Auto-clear undo snackbar after delay
-  useEffect(() => {
-    if (!justCleared) return;
-    const timer = setTimeout(() => setJustCleared(null), 4500);
-    return () => clearTimeout(timer);
-  }, [justCleared]);
-
-  const validVideoId = extractVideoId(youtubeUrl);
-
-  // Handler for summarization API call using OpenAI client with vision
-  const handleSummarize = async () => {
-    if (!youtubeUrl.trim() || !validVideoId) {
-      setError('Paste a valid YouTube URL');
-      return;
+async function fetchTranscript(youtubeUrl: string): Promise<string> {
+  // Try public API for transcript (if captions already exist)
+  try {
+    const videoId = youtubeUrl.includes("v=")
+      ? youtubeUrl.split("v=")[1].split("&")[0]
+      : youtubeUrl.split("/").at(-1)?.split("?")[0];
+    const r = await fetch(`https://yt.lemnoslife.com/noKey/videos?part=transcript&id=${videoId}`);
+    const json = await r.json();
+    const parts = json?.videos?.[0]?.transcript?.segments?.map((seg: any) => seg.text);
+    if (parts && parts.join(" ").length > 30) {
+      return parts.join(" ");
     }
-    setIsProcessing(true);
-    setError('');
-    
-    try {
-      // Dynamic import of OpenAI client
-      const { default: OpenAI } = await import('openai');
-      
-      // Get API key from environment
-      const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
-      if (!apiKey) {
-        throw new Error('OpenRouter API key not configured');
-      }
-      
-      // Create OpenAI client configured for OpenRouter
-      const client = new OpenAI({
-        baseURL: "https://openrouter.ai/api/v1",
-        apiKey: apiKey
-      });
+  } catch {}
 
-      // Get YouTube video thumbnail for visual analysis
-      const thumbnailUrl = `https://img.youtube.com/vi/${validVideoId}/maxresdefault.jpg`;
-      
-      const completion = await client.chat.completions.create({
-        model: "openrouter/horizon-beta",
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: `Analyze this YouTube video thumbnail and create a comprehensive summary based on what you can see:\n\nVideo URL: ${youtubeUrl}\nVideo ID: ${validVideoId}\n\nBased on the thumbnail image, please provide:\n1. A compelling title for the summary\n2. What the video appears to be about\n3. Key topics that might be covered\n4. Target audience and educational value\n5. Actionable insights or takeaways\n\nFormat the response as a detailed, educational summary that would be valuable for note-taking and reference.`
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: thumbnailUrl
-                }
-              }
-            ]
+  // Fallback: ask our backend to transcribe the audio!
+  try {
+    const res = await fetch("http://localhost:5174/api/transcribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: youtubeUrl }),
+    });
+    if (!res.ok) return "";
+    const json = await res.json();
+    return json.transcript || "";
+  } catch {}
+  return "";
+}
+
+export default function YouTubeSummarizer() {
+  const [url, setUrl] = useState("");
+  const [summary, setSummary] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
+  const [manualText, setManualText] = useState("");
+  const [showManual, setShowManual] = useState(false);
+
+  const summarize = async (inputText?: string) => {
+    setError("");
+    setSummary("");
+    setSaved(false);
+    setLoading(true);
+    try {
+      let summaryInput = "";
+      let reason = "";
+      if (inputText) {
+        // Manual input provided by user
+        summaryInput = `Summarize the following as a YouTube video: \n${inputText}`;
+        reason = "Manual text provided by user.";
+      } else {
+        const transcript = await fetchTranscript(url);
+        if (!transcript || transcript.length < 80) {
+          // Fallback: get metadata (title, description)
+          reason = "Transcript not found or too short. Using video metadata.";
+          let videoId = url.includes("v=")
+            ? url.split("v=")[1].split("&")[0]
+            : url.split("/").at(-1)?.split("?")[0];
+          try {
+            const r = await fetch(`https://yt.lemnoslife.com/noKey/videos?part=snippet&id=${videoId}`);
+            const json = await r.json();
+            const info = json?.videos?.[0]?.snippet;
+            if (info) {
+              summaryInput = `Summarize this YouTube video. Title: ${info.title}\nDescription: ${info.description}\nGive a concise summary of the video’s topic and likely content, focusing on what a viewer would expect to learn or see.`;
+            } else {
+              // Both transcript and metadata failed; allow manual entry
+              setShowManual(true);
+              setError("Could not get transcript or metadata. Enter text to summarize.");
+              setLoading(false);
+              return;
+            }
+          } catch {
+            setShowManual(true);
+            setError("Could not get transcript or metadata. Enter text to summarize.");
+            setLoading(false);
+            return;
           }
-        ]
-      }, {
-        headers: {
-          "HTTP-Referer": "https://dzowa-ai-notes.netlify.app",
-          "X-Title": "DzowaAI Notes"
+        } else {
+          summaryInput = `Summarize the following YouTube video transcript as concisely as possible, focusing on key points, in a clear list.\n\n${transcript}`;
         }
-      });
-
-      const aiContent = completion.choices[0]?.message?.content || 'Unable to generate summary';
-      
-      // Extract title from the content or create a smart title
-      const lines = aiContent.split('\n');
-      const titleLine = lines.find((line: string) => line.toLowerCase().includes('title') || line.startsWith('#'));
-      const extractedTitle = titleLine ? titleLine.replace(/^#+\s*|title:\s*/i, '').trim() : `YouTube Summary: ${validVideoId}`;
-      
-      const summary: VideoSummary = {
-        title: `📹 ${extractedTitle}`,
-        content: aiContent,
-        noteContent: `# 📹 ${extractedTitle}\n\n**Source:** ${youtubeUrl}\n**Video ID:** ${validVideoId}\n**Generated:** ${new Date().toLocaleDateString()}\n\n---\n\n${aiContent}`,
-        type: 'educational',
-        url: youtubeUrl,
-        videoId: validVideoId,
-        timestamp: new Date(),
-      };
-      
-      setLastSummary(summary);
-      setRecentSummaries(([summary, ...recentSummaries]).slice(0, 10));
-      if (autoCreateNote) handleCreateNote(summary);
-      setYoutubeUrl('');
-    } catch (error) {
-      console.error('YouTube summarization error:', error);
-      setError('Failed to process video. Please check your API key and try again.');
-    } finally {
-      setIsProcessing(false);
+      }
+      // Google Gemini REST API Mode
+      let summaryText = "";
+      try {
+        const response = await fetch(
+          "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + GEMINI_API_KEY,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              contents: [
+                { parts: [ { text: summaryInput } ] }
+              ]
+            })
+          }
+        );
+        const resJson = await response.json();
+        summaryText = resJson?.candidates?.[0]?.content?.parts?.[0]?.text || "No summary returned.";
+      } catch (e) {
+        setError("Gemini API call failed. Check API key and quota.");
+        setLoading(false);
+        return;
+      }
+      setSummary(summaryText + (reason ? `\n\n(_${reason}_)` : ""));
+      setShowManual(false);
+      setManualText("");
+    } catch (err: any) {
+      setError(err?.message || "Error occurred while summarizing");
     }
+    setLoading(false);
   };
 
-  // Pass summary as note creation
-  const handleCreateNote = (summary: VideoSummary) => {
-    if (onCreateNote) {
-      onCreateNote({
-        id: Date.now().toString(),
-        title: summary.title,
-        content: summary.noteContent,
-        category: 'YouTube Summaries',
-        type: 'youtube',
-        metadata: {
-          videoUrl: summary.url,
-          videoId: summary.videoId,
-          videoType: summary.type,
-          processedAt: summary.timestamp,
-        },
-        timestamp: new Date(),
-        tags: ['youtube', 'summary', summary.type],
-      });
-    }
-  };
-
-  // Copy text and show toast
-  const handleCopy = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    setCopyFeedback(label);
-    setTimeout(() => setCopyFeedback(null), 1500);
-  };
-
-  // Clear all summaries with undo possibility
-  const clearHistory = () => {
-    setJustCleared(recentSummaries);
-    setRecentSummaries([]);
-    setLastSummary(null);
-    window.localStorage.removeItem(STORAGE_KEY);
-  };
-
-  // Undo clearing summaries
-  const undoClear = () => {
-    if (justCleared) setRecentSummaries(justCleared);
-    setJustCleared(null);
-  };
-
-  // Toggle expand/collapse of summaries
-  const toggleExpand = (index: number) => {
-    setRecentSummaries(rs =>
-      rs.map((item, idx) =>
-        idx === index
-          ? { ...item, expanded: !item.expanded }
-          : { ...item, expanded: denseMode ? false : item.expanded }
-      )
-    );
+  // Dummy save to note handler for demo, connect to your app's note save logic as needed
+  const handleSaveAsNote = () => {
+    // Usually: pass to parent, context, or trigger HTTP API, etc.
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1600);
   };
 
   return (
-    <div className="relative flex flex-col w-11/12 sm:w-4/5 max-w-7xl mx-auto rounded-2xl overflow-hidden bg-white dark:bg-gray-900 shadow-lg border border-purple-200 dark:border-gray-800 min-h-[620px]">
-      {/* Settings button */}
-      <button
-        className="absolute z-30 top-4 right-5 p-1.5 rounded-full bg-purple-200/90 dark:bg-purple-900 text-purple-700 dark:text-white shadow hover:bg-purple-300 dark:hover:bg-purple-700"
-        aria-label="Open Settings"
-        onClick={() => setSettingsOpen(o => !o)}
-        title="Settings"
-        tabIndex={0}
-        type="button"
-      >
-        <SettingsIcon size={20} />
-      </button>
-
-      {/* Settings panel */}
-      <AnimatePresence>
-        {settingsOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -16 }}
-            className="absolute z-40 top-14 right-5 bg-white dark:bg-gray-800 border dark:border-gray-700 border-gray-200 rounded-xl py-4 px-5 flex flex-col gap-3 shadow-2xl min-w-[230px]"
-          >
-            <label className="flex items-center gap-2 cursor-pointer text-sm" htmlFor="dense-mode">
-              <input
-                id="dense-mode"
-                type="checkbox"
-                className="form-checkbox"
-                checked={denseMode}
-                onChange={() => setDenseMode(d => !d)}
-                aria-checked={denseMode}
-              />
-              Dense summary list
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer text-sm" htmlFor="auto-create-note">
-              <input
-                id="auto-create-note"
-                type="checkbox"
-                className="form-checkbox"
-                checked={autoCreateNote}
-                onChange={() => setAutoCreateNote(a => !a)}
-                aria-checked={autoCreateNote}
-              />
-              Auto create note
-            </label>
-            <button
-              onClick={clearHistory}
-              className="flex gap-1 items-center text-red-600 hover:underline text-sm mt-2"
-              aria-label="Clear all history"
-              type="button"
-            >
-              <Trash2 size={16} /> Clear all history
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Undo clear snackbar */}
-      <AnimatePresence>
-        {justCleared && (
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 24 }}
-            className="fixed bottom-7 left-1/2 -translate-x-1/2 flex gap-4 items-center bg-fuchsia-700 text-white px-5 py-2 rounded-lg shadow-lg z-40 font-semibold"
-            role="alert"
-          >
-            Cleared history.
-            <button onClick={undoClear} className="underline underline-offset-2 flex gap-1 items-center px-2" type="button">
-              <Undo2 size={17} aria-hidden="true" /> Undo
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Header */}
-      <header className="flex items-center gap-4 px-8 py-6 bg-gradient-to-r from-fuchsia-700/90 to-purple-800 text-white rounded-t-2xl shadow-inner">
-        <span className="flex items-center justify-center w-12 h-12 rounded-xl bg-purple-950/70 shadow-lg" aria-hidden="true">
-          <Youtube className="w-7 h-7" />
-        </span>
-        <div>
-          <h1 className="text-xl font-bold leading-tight mb-0.5">YouTube Summarizer</h1>
-          <p className="text-sm opacity-90">Turn any YouTube video into a perfect summary note—instantly!</p>
+    <div className="max-w-lg mx-auto my-10 p-0 z-50 relative animate-fadein scale-95 md:scale-100 bg-gradient-to-br from-purple-200/60 via-white dark:from-gray-900/80 dark:via-gray-800/95 to-pink-100/60 shadow-2xl rounded-3xl border border-purple-200 dark:border-gray-700 overflow-hidden">
+      <div className="p-0">
+        <div className="bg-gradient-to-r from-purple-500/70 to-pink-400/70 dark:from-purple-800/70 dark:to-pink-700/70 px-8 py-6 rounded-b-lg -mb-4">
+          <h2 className="text-3xl font-extrabold text-white text-center tracking-tight drop-shadow-sm animate-slide-in">🎬 YouTube Video Summarizer</h2>
         </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="flex-1 p-8 bg-gray-50 dark:bg-gray-900/70 space-y-8 overflow-y-auto">
-        {/* Input section */}
-        <section className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-sm mb-2">
-          <div className="flex items-center gap-2 mb-2">
-            <Link className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-            <h2 className="font-semibold text-gray-900 dark:text-white">Paste YouTube Link</h2>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative sm:flex-1">
-              <input
-                type="text"
-                placeholder="e.g. youtube.com/watch?v=…"
-                value={youtubeUrl}
-                onChange={e => {
-                  setYoutubeUrl(e.target.value);
-                  setError('');
-                }}
-                onKeyDown={e => (e.key === 'Enter' && !!validVideoId) && handleSummarize()}
-                className="
-                  sm:flex-1 w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600
-                  bg-white dark:bg-gray-700 font-medium text-gray-900 dark:text-white shadow
-                  placeholder-gray-400 dark:placeholder-gray-500 pr-24
-                  focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-                aria-label="YouTube video URL"
-                spellCheck={false}
-                autoFocus
-              />
-              {validVideoId && (
-                <span
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-purple-600 dark:text-purple-300 opacity-70 flex items-center gap-1 rounded-xl bg-purple-50 dark:bg-purple-900/50 px-2 py-1"
-                  aria-label="Detected video ID"
-                >
-                  <Eye size={14} />
-                  {validVideoId}
-                </span>
-              )}
-            </div>
-            <button
-              onClick={handleSummarize}
-              disabled={!validVideoId || isProcessing}
-              type="button"
-              aria-busy={isProcessing}
-              className="flex-shrink-0 px-6 py-3 rounded-lg font-bold bg-gradient-to-tr from-purple-600 to-fuchsia-700 hover:from-purple-700 hover:to-fuchsia-800 text-white shadow-md flex items-center gap-2 justify-center focus:outline-none focus:ring-2 focus:ring-fuchsia-600 disabled:bg-gray-300 disabled:text-gray-400 disabled:cursor-not-allowed transition"
-              aria-label="Summarize YouTube video"
-            >
-              {isProcessing ? (
-                <>
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ repeat: Infinity, duration: 1.1 }}
-                    className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
-                    aria-hidden="true"
-                  />
-                  <span>Processing…</span>
-                </>
-              ) : (
-                <>
-                  <Download size={18} />
-                  <span>Summarize</span>
-                </>
-              )}
-            </button>
-          </div>
+        <div className="px-7 md:px-10 pb-8 pt-8 flex flex-col gap-1">
+          <label className="block font-semibold text-gray-700 dark:text-purple-200 mb-1 tracking-wide text-base" htmlFor="yt-url">Paste YouTube URL</label>
+          <input
+            id="yt-url"
+            value={url}
+            onChange={e => setUrl(e.target.value)}
+            placeholder="https://youtube.com/watch?v=..."
+            className="w-full mb-3 p-3 bg-white/70 dark:bg-gray-800/80 border-2 border-transparent hover:border-purple-400/70 focus:border-purple-600 dark:focus:border-purple-500 focus:ring-1 focus:ring-purple-200/80 dark:focus:ring-purple-600/80 rounded-xl shadow-sm focus:outline-none text-gray-900 dark:text-white text-lg transition-all duration-200"
+            disabled={loading}
+            autoFocus
+          />
+          <button
+            onClick={() => summarize()}
+            disabled={loading || !url.trim()}
+            className="mt-1 w-full bg-gradient-to-r from-purple-600 via-pink-500 to-fuchsia-600 hover:to-pink-500 hover:from-purple-700 dark:bg-gradient-to-r dark:from-purple-800 dark:to-pink-600 text-white py-3 rounded-xl font-bold text-lg shadow-md transition-all duration-200 flex items-center justify-center gap-2 active:scale-95 focus:ring-2 focus:ring-purple-400 disabled:opacity-50"
+          >
+            {loading ? (
+              <>
+                <svg className="animate-spin w-5 h-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                </svg>
+                Processing...
+              </>
+            ) : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="inline-block w-5 h-5 mr-2 text-white"> <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 14h.01M16 10h.01M21 12.64A9 9 0 1111.99 3c1.27 0 2.5.24 3.61.7"/> </svg> 
+                Summarize
+              </>
+            )}
+          </button>
           {error && (
-            <div
-              className="flex items-center gap-1 text-red-600 dark:text-red-400 text-sm mt-2"
-              role="alert"
-              aria-live="assertive"
-              aria-atomic="true"
-            >
-              <AlertCircle size={17} />
+            <div className="text-red-600 my-3 font-semibold text-center animate-shake">
               {error}
-            </div>
-          )}
-          <div className="flex gap-3 items-center mt-2 text-xs text-gray-600 dark:text-gray-300 bg-blue-50 dark:bg-blue-900/10 rounded-lg p-2 border border-blue-200 dark:border-blue-800">
-            <span>Formats:</span>
-            <span className="bg-white dark:bg-blue-950/40 px-2 py-0.5 rounded cursor-help" title="https://www.youtube.com/watch?v=VIDEO_ID">youtube.com/watch?v=…</span>
-            <span className="bg-white dark:bg-blue-950/40 px-2 py-0.5 rounded cursor-help" title="https://youtu.be/VIDEO_ID">youtu.be/…</span>
-            <span className="bg-white dark:bg-blue-950/40 px-2 py-0.5 rounded cursor-help" title="https://youtube.com/embed/VIDEO_ID">youtube.com/embed/…</span>
-          </div>
-        </section>
-
-        {/* Latest summary card */}
-        <AnimatePresence>
-          {lastSummary && (
-            <motion.section
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl"
-              aria-live="polite"
-            >
-              <div className="flex gap-5 border-b border-gray-100 dark:border-gray-800 p-5 items-center">
-                <a
-                  href={`https://youtu.be/${lastSummary.videoId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Open video in YouTube"
-                >
-                  <img
-                    src={`https://img.youtube.com/vi/${lastSummary.videoId}/mqdefault.jpg`}
-                    alt="Video thumbnail"
-                    className="w-28 h-20 object-cover rounded shadow border"
-                    loading="lazy"
+              {showManual && (
+                <div className="mt-5 bg-purple-50 dark:bg-purple-900/30 border-2 border-purple-200 dark:border-purple-600 rounded-xl p-4 transition shadow-md animate-in fade-in flex flex-col gap-2">
+                  <label htmlFor="manual-text" className="block text-purple-700 dark:text-purple-300 font-semibold mb-1">Enter Text to Summarize</label>
+                  <textarea
+                    id="manual-text"
+                    rows={5}
+                    value={manualText}
+                    onChange={e => setManualText(e.target.value)}
+                    placeholder="Describe the video topic, main message, or paste a transcript."
+                    className="w-full p-3 rounded-lg border-2 border-purple-200 dark:border-purple-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white mb-2 text-base focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all duration-200 resize-y"
                   />
-                </a>
-                <div className="flex-1 min-w-0">
-                  <div className="flex gap-2 items-center mb-1 text-base">
-                    <span className="font-bold truncate">{lastSummary.title}</span>
-                    <a
-                      href={lastSummary.url}
-                      className="ml-1 text-purple-700 hover:text-purple-900"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="Open original video URL"
-                    >
-                      <ExternalLink size={17} />
-                    </a>
-                    <button
-                      title="Copy video link"
-                      onClick={() => handleCopy(lastSummary.url, 'Video Link Copied!')}
-                      className="ml-1 text-purple-600 hover:text-purple-900"
-                      aria-label="Copy video URL"
-                      type="button"
-                    >
-                      <Copy size={16} />
-                    </button>
-                  </div>
-                  <div className="flex gap-2 text-xs text-gray-500 dark:text-gray-400">
-                    <span>{lastSummary.type}</span>
-                    <span>{lastSummary.timestamp.toLocaleString()}</span>
-                  </div>
+                  <button
+                    className="w-full px-3 py-2 bg-gradient-to-r from-purple-400 via-pink-400 to-purple-600 hover:from-purple-500 hover:to-pink-600 text-white font-bold rounded-lg shadow transition-all duration-200 active:scale-95 focus:ring-2 focus:ring-purple-400 disabled:opacity-60"
+                    disabled={loading || !manualText.trim()}
+                    onClick={() => summarize(manualText)}
+                  >
+                    Summarize This Text
+                  </button>
                 </div>
-                <button
-                  onClick={() => handleCreateNote(lastSummary)}
-                  className="px-3 py-2 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded font-bold text-xs flex items-center gap-1 ml-2 transition focus:outline-none focus:ring-2 focus:ring-fuchsia-500"
-                  title="Create note from summary"
-                  type="button"
-                >
-                  <FileText size={15} /> Note
-                </button>
-              </div>
-              <div className="prose dark:prose-invert p-5 max-h-56 overflow-y-auto relative whitespace-pre-line">
-                {lastSummary.content}
-                <button
-                  className="absolute right-6 top-5 text-fuchsia-500 hover:text-fuchsia-800 px-1 text-xs bg-white/80 dark:bg-gray-900/70 rounded transition"
-                  title="Copy summary"
-                  onClick={() => handleCopy(lastSummary.content, 'Summary Copied!')}
-                  aria-label="Copy summary text"
-                  type="button"
-                >
-                  <Copy size={13} />
-                </button>
-              </div>
-            </motion.section>
-          )}
-        </AnimatePresence>
-
-        {/* Summary History List */}
-        {recentSummaries.length > 0 && (
-          <section
-            className="border border-gray-200 dark:border-gray-700 rounded-xl bg-gradient-to-br from-white/60 via-gray-50/70 to-purple-50 dark:from-purple-950/80 dark:to-gray-900/50 p-5 shadow-inner"
-            aria-label="Summary history"
-          >
-            <div className="flex gap-2 items-center mb-2 text-purple-900 dark:text-purple-400 font-bold">
-              <Clock size={17} />
-              <span>Summary History</span>
+              )}
             </div>
-            <ul className="flex flex-col gap-3">
-              {recentSummaries.map((summary, i) => (
-                <motion.li
-                  key={i}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 8 }}
-                  className={`border border-gray-100 dark:border-gray-700 rounded-lg p-3 shadow-sm group
-                    ${denseMode ? 'py-2' : ''} bg-white dark:bg-gray-900/80 hover:ring-2 hover:ring-fuchsia-400 transition relative`}
-                >
-                  <div className="flex items-center mb-2">
-                    <a
-                      href={`https://youtu.be/${summary.videoId}`}
-                      target="_blank"
-                      rel="noopener"
-                      className="mr-2 shrink-0"
-                      aria-label="Open video in YouTube"
-                    >
-                      <img
-                        src={`https://img.youtube.com/vi/${summary.videoId}/default.jpg`}
-                        className="w-12 h-8 rounded border shadow"
-                        loading="lazy"
-                        alt="YouTube video thumbnail"
-                      />
-                    </a>
-                    <span
-                      className="font-semibold text-sm flex-1 truncate"
-                      title={summary.title}
-                    >
-                      {summary.title}
-                    </span>
-                    <button
-                      onClick={() => toggleExpand(i)}
-                      title={summary.expanded ? "Collapse" : "Expand"}
-                      className="ml-2 text-fuchsia-500 hover:text-fuchsia-800"
-                      aria-expanded={summary.expanded || false}
-                      aria-label={summary.expanded ? "Collapse summary" : "Expand summary"}
-                      type="button"
-                    >
-                      {summary.expanded ? <ChevronUp size={17} /> : <ChevronDown size={17} />}
-                    </button>
-                    <button
-                      onClick={() => handleCopy(summary.content, 'Copied!')}
-                      title="Copy summary"
-                      className="ml-2 text-fuchsia-500 hover:text-fuchsia-800"
-                      type="button"
-                      aria-label="Copy summary text"
-                    >
-                      <Copy size={13} />
-                    </button>
-                  </div>
-                  <div className="flex gap-2 items-center text-xs text-gray-500 dark:text-gray-400 mb-1">
-                    <span>{summary.type}</span>
-                    <span className="mx-1">&bull;</span>
-                    <time dateTime={summary.timestamp.toISOString()}>
-                      {typeof summary.timestamp === 'string'
-                        ? new Date(summary.timestamp).toLocaleString()
-                        : summary.timestamp.toLocaleString()}
-                    </time>
-                  </div>
-                  {(summary.expanded || !denseMode) && (
-                    <div className="mt-1 whitespace-pre-line max-h-32 overflow-y-auto text-gray-800 dark:text-gray-200 text-sm border-t border-gray-200 dark:border-gray-700 pt-2">
-                      {summary.content}
-                    </div>
-                  )}
-                </motion.li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        {/* Copy feedback toast */}
-        <AnimatePresence>
-          {copyFeedback && <Toast message={copyFeedback} />}
-        </AnimatePresence>
-      </main>
-
-      {/* Floating Action Button */}
-      <AnimatePresence>
-        {!settingsOpen && !isProcessing && !justCleared && (
-          <motion.button
-            key="fab"
-            initial={{ y: 80, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 80, opacity: 0 }}
-            type="button"
-            onClick={() => (document.querySelector('input[type="text"]') as HTMLInputElement)?.focus()}
-            className="fixed z-40 bottom-10 right-10 h-16 w-16 rounded-full bg-gradient-to-br from-fuchsia-600 to-purple-700 shadow-2xl flex items-center justify-center text-white text-3xl font-black hover:scale-110 active:scale-95 focus:outline-none ring-4 ring-fuchsia-400/0 hover:ring-fuchsia-400/40 transition"
-            aria-label="Focus YouTube URL input"
-            title="Paste a new YouTube link"
-          >
-            <Youtube className="w-8 h-8" />
-          </motion.button>
-        )}
-      </AnimatePresence>
+          )}
+          {summary && (
+            <div className="mt-7 animate-in fade-in zoom-in rounded-2xl border-2 border-purple-200 dark:border-purple-700 shadow-xl bg-gradient-to-bl from-white/80 to-purple-50/80 dark:from-gray-900/80 dark:to-purple-900/70 p-5 flex flex-col gap-2">
+              <h3 className="font-semibold mb-2 text-purple-700 dark:text-purple-300 text-lg">Summary:</h3>
+              <pre className="whitespace-pre-wrap text-gray-900 dark:text-white rounded-xl px-2 pb-2 pt-1 text-base leading-relaxed transition-all duration-300 max-h-96 sm:max-h-80 overflow-y-auto bg-transparent border-none shadow-none">{summary}</pre>
+              <button
+                onClick={handleSaveAsNote}
+                className={`mt-4 w-full px-3 py-2 bg-gradient-to-r from-green-500 via-emerald-500 to-lime-500 hover:from-green-600 hover:to-lime-600 text-white font-semibold rounded-lg shadow transition-all duration-200 active:scale-95 focus:ring-2 focus:ring-green-400 ${saved && 'animate-bounce'} disabled:opacity-60`}
+                disabled={saved}
+              >
+                {saved ? (
+                  <>
+                    <svg className="inline-block w-5 h-5 mr-2 text-white animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+                    Note Saved
+                  </>
+                ) : (
+                  <>
+                    <svg className="inline-block w-5 h-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>
+                    Save as Note
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

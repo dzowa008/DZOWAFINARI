@@ -12,6 +12,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.51.0",
     "@types/uuid": "^10.0.0",
+    "cohere-ai": "^7.18.0",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "framer-motion": "^12.23.11",

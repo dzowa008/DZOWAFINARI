@@ -961,7 +961,18 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="fixed inset-0 bg-gradient-to-br from-purple-900/20 via-black to-pink-900/20 pointer-events-none" />
-      
+      {/* Mobile Nav */}
+      <div className="md:hidden fixed top-4 left-4 z-50">
+        <button
+          className="p-2 bg-gray-900 bg-opacity-70 rounded-lg shadow-lg text-white border border-gray-800 focus:outline-none"
+          onClick={() => setIsSidebarOpen(s => !s)}
+          aria-label="Toggle sidebar"
+        >
+          <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+      </div>
       {/* Notifications */}
       <div className="fixed top-4 right-4 z-50 space-y-2">
         {notifications.map(notification => (
@@ -997,20 +1008,22 @@ function Dashboard() {
         </div>
       )}
       
-      <div className="flex h-screen">
-        <Sidebar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          isSidebarOpen={isSidebarOpen}
-          setIsSidebarOpen={setIsSidebarOpen}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-          categories={categories}
-          onCreateNote={() => setIsCreatingNote(true)}
-          recentNotes={notes.slice(0, 5)}
-        />
-
-        <div className="flex-1 flex flex-col h-screen overflow-hidden">
+      <div className="flex flex-col md:flex-row h-screen">
+        {/* Sidebar: overlays on mobile, sticky on desktop */}
+        <div className={`fixed md:static inset-y-0 left-0 z-40 md:z-auto transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 w-64 md:w-64 bg-gray-900 md:bg-transparent md:block` + (isSidebarOpen ? '' : ' md:block') }>
+          <Sidebar
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            isSidebarOpen={isSidebarOpen}
+            setIsSidebarOpen={setIsSidebarOpen}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+            categories={categories}
+            onCreateNote={() => setIsCreatingNote(true)}
+            recentNotes={notes.slice(0, 5)}
+          />
+        </div>
+        <div className="flex-1 flex flex-col h-screen overflow-hidden bg-black md:bg-transparent">
           <Header
             activeTab={activeTab}
             filteredNotesCount={filteredNotes.length}
@@ -1020,7 +1033,7 @@ function Dashboard() {
             onSettingsClick={() => setShowSettings(true)}
           />
 
-          <main className="flex-1 overflow-y-auto p-6">
+          <main className="flex-1 overflow-y-auto p-2 sm:p-4 md:p-6 lg:p-8 w-full">
             {activeTab === 'dashboard' && (
               <div className="space-y-6">
                 <StatsCards stats={stats} />
