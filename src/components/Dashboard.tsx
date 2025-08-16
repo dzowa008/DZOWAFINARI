@@ -28,7 +28,9 @@ import {
   Users,
   Globe,
   Shield,
-  Sparkles
+  Sparkles,
+  Menu,
+  X
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -62,7 +64,8 @@ function Dashboard() {
 
   // Core state
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -97,6 +100,21 @@ function Dashboard() {
   // Refs
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Responsive sidebar handling
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setIsSidebarOpen(true);
+        setIsMobileMenuOpen(false);
+      } else {
+        setIsSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Initialize dashboard
   useEffect(() => {
     if (user) {
@@ -123,11 +141,19 @@ function Dashboard() {
             break;
         }
       }
+      // Escape key to close modals
+      if (e.key === 'Escape') {
+        if (showCreateModal) setShowCreateModal(false);
+        if (showSettingsModal) setShowSettingsModal(false);
+        if (selectedNote) setSelectedNote(null);
+        if (editingNote) setEditingNote(null);
+        if (isMobileMenuOpen) setIsMobileMenuOpen(false);
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [showCreateModal, showSettingsModal, selectedNote, editingNote, isMobileMenuOpen]);
 
   const initializeDashboard = async () => {
     setIsLoading(true);
@@ -136,7 +162,7 @@ function Dashboard() {
       const welcomeMessage: ChatMessage = {
         id: 'welcome',
         type: 'ai',
-        content: `Welcome to SmaRta AI Notes! I'm your intelligent assistant powered by advanced AI. I can help you:\n\n• Analyze and summarize your notes\n• Answer questions about your content\n• Provide writing assistance\n• Generate insights and suggestions\n\nHow can I help you today?`,
+        content: `Welcome to SmaRta AI Notes! 🚀\n\nI'm your intelligent assistant powered by advanced AI. I can help you:\n\n• 📝 Analyze and summarize your notes\n• ❓ Answer questions about your content\n• ✍️ Provide writing assistance\n• 💡 Generate insights and suggestions\n• 🧠 Create quizzes from your notes\n• 📹 Summarize YouTube videos\n\nHow can I help you today?`,
         timestamp: new Date()
       };
       setChatMessages([welcomeMessage]);
@@ -175,10 +201,14 @@ function Dashboard() {
 
   const handleNoteClick = (note: Note) => {
     setSelectedNote(note);
+    if (window.innerWidth < 1024) {
+      setIsMobileMenuOpen(false);
+    }
   };
 
   const handleEditNote = (note: Note) => {
     setEditingNote(note);
+    setSelectedNote(null);
   };
 
   const handleSaveNote = async (updatedNote: Note) => {
@@ -422,467 +452,641 @@ function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900 flex">
-      {/* Animated Background */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-slate-900 dark:to-indigo-950">
+      {/* Premium Animated Background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-300/10 dark:bg-purple-500/5 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-pink-300/10 dark:bg-pink-500/5 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-300/5 dark:bg-blue-500/3 rounded-full blur-3xl animate-pulse delay-2000"></div>
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-blob-morph"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl animate-blob-morph delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-indigo-400/10 to-purple-400/10 rounded-full blur-3xl animate-blob-morph delay-2000"></div>
       </div>
 
-      {/* Sidebar */}
-      <Sidebar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        isSidebarOpen={isSidebarOpen}
-        setIsSidebarOpen={setIsSidebarOpen}
-        categories={categories}
-        onCreateNote={() => setShowCreateModal(true)}
-        recentNotes={recentNotes}
-      />
+      {/* Mobile Header */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50">
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors"
+            >
+              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+                <Brain className="w-5 h-5 text-white" />
+              </div>
+              <h1 className="text-lg font-bold gradient-text">SmaRta</h1>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:shadow-lg transition-all"
+          >
+            <Plus className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-screen relative z-10">
-        <Header
-          activeTab={activeTab}
-          filteredNotesCount={filteredNotes.length}
-          onExport={handleExportNotes}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          onSettingsClick={() => setShowSettingsModal(true)}
-        />
+      {/* Mobile Menu Overlay */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="lg:hidden fixed inset-0 z-30 bg-black/50 backdrop-blur-sm"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              className="w-80 h-full bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-700/50"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Sidebar
+                activeTab={activeTab}
+                setActiveTab={(tab) => {
+                  setActiveTab(tab);
+                  setIsMobileMenuOpen(false);
+                }}
+                isSidebarOpen={true}
+                setIsSidebarOpen={setIsSidebarOpen}
+                categories={categories}
+                onCreateNote={() => {
+                  setShowCreateModal(true);
+                  setIsMobileMenuOpen(false);
+                }}
+                recentNotes={recentNotes}
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        <main className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-8">
-            <AnimatePresence mode="wait">
-              {/* Dashboard Tab */}
-              {activeTab === 'dashboard' && (
-                <motion.div
-                  key="dashboard"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="space-y-8"
-                >
-                  {/* Welcome Section */}
-                  <div className="bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-blue-500/10 dark:from-purple-500/20 dark:via-pink-500/20 dark:to-blue-500/20 backdrop-blur-xl border border-purple-200/30 dark:border-purple-500/30 rounded-3xl p-8">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                          Welcome back, {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}! 👋
-                        </h1>
-                        <p className="text-gray-600 dark:text-gray-300 text-lg">
-                          Your AI-powered note-taking dashboard is ready. What would you like to create today?
-                        </p>
+      <div className="flex">
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:block">
+          <Sidebar
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            isSidebarOpen={isSidebarOpen}
+            setIsSidebarOpen={setIsSidebarOpen}
+            categories={categories}
+            onCreateNote={() => setShowCreateModal(true)}
+            recentNotes={recentNotes}
+          />
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col min-h-screen">
+          {/* Desktop Header */}
+          <div className="hidden lg:block">
+            <Header
+              activeTab={activeTab}
+              filteredNotesCount={filteredNotes.length}
+              onExport={handleExportNotes}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              onSettingsClick={() => setShowSettingsModal(true)}
+            />
+          </div>
+
+          {/* Main Content Area */}
+          <main className="flex-1 overflow-y-auto pt-20 lg:pt-0">
+            <div className="container-responsive space-premium">
+              <AnimatePresence mode="wait">
+                {/* Dashboard Tab */}
+                {activeTab === 'dashboard' && (
+                  <motion.div
+                    key="dashboard"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="space-y-8"
+                  >
+                    {/* Welcome Hero Section */}
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="card-base card-interactive bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-blue-500/10 dark:from-purple-500/20 dark:via-pink-500/20 dark:to-blue-500/20 border-purple-200/30 dark:border-purple-500/30 p-8 rounded-premium-xl"
+                    >
+                      <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
+                        <div className="text-center lg:text-left">
+                          <motion.h1 
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 }}
+                            className="hierarchy-1 text-gray-900 dark:text-white mb-4"
+                          >
+                            Welcome back, {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}! 👋
+                          </motion.h1>
+                          <motion.p 
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.3 }}
+                            className="text-body text-gray-600 dark:text-gray-300 max-w-2xl"
+                          >
+                            Your AI-powered note-taking dashboard is ready. Create, organize, and interact with your notes using advanced AI capabilities.
+                          </motion.p>
+                        </div>
+                        <motion.div 
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: 0.4 }}
+                          className="hidden lg:flex items-center space-x-4"
+                        >
+                          <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-pink-500 rounded-premium shadow-glow flex items-center justify-center animate-pulse-glow">
+                            <Brain className="w-12 h-12 text-white" />
+                          </div>
+                        </motion.div>
                       </div>
-                      <div className="hidden md:flex items-center space-x-4">
-                        <div className="w-20 h-20 bg-gradient-to-br from-purple-400 to-pink-400 rounded-2xl flex items-center justify-center shadow-lg">
-                          <Brain className="w-10 h-10 text-white" />
+                    </motion.div>
+
+                    {/* Stats Cards */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 30 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.5 }}
+                    >
+                      <StatsCards stats={stats} />
+                    </motion.div>
+
+                    {/* Quick Actions */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 30 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.6 }}
+                    >
+                      <QuickActions
+                        onCreateNote={() => setShowCreateModal(true)}
+                        onStartRecording={startRecording}
+                        onFileUpload={() => setActiveTab('upload')}
+                        onOpenChat={() => setActiveTab('chat')}
+                        isRecording={isRecording}
+                      />
+                    </motion.div>
+
+                    {/* Recent Activity */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 30 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.7 }}
+                      className="card-base rounded-premium-xl"
+                    >
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
+                            <Clock className="w-5 h-5 text-white" />
+                          </div>
+                          <h3 className="hierarchy-3 text-gray-900 dark:text-white">Recent Activity</h3>
+                        </div>
+                        <button
+                          onClick={() => setActiveTab('notes')}
+                          className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-medium transition-colors"
+                        >
+                          View All →
+                        </button>
+                      </div>
+                      
+                      {recentNotes.length === 0 ? (
+                        <div className="text-center py-16">
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: "spring", stiffness: 200 }}
+                          >
+                            <FileText className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                          </motion.div>
+                          <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No notes yet</h4>
+                          <p className="text-gray-600 dark:text-gray-400 mb-6">Create your first note to get started with AI-powered note-taking</p>
+                          <button
+                            onClick={() => setShowCreateModal(true)}
+                            className="btn-base btn-primary hover-lift"
+                          >
+                            <Plus className="w-5 h-5" />
+                            Create Your First Note
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="grid-responsive">
+                          {recentNotes.map((note, index) => (
+                            <motion.div
+                              key={note.id}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: index * 0.1 }}
+                              onClick={() => handleNoteClick(note)}
+                              className="card-premium hover-lift cursor-pointer group"
+                            >
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex items-center space-x-3">
+                                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+                                    {note.type === 'text' && <FileText className="w-5 h-5 text-white" />}
+                                    {note.type === 'audio' && <Mic className="w-5 h-5 text-white" />}
+                                    {note.type === 'video' && <Camera className="w-5 h-5 text-white" />}
+                                    {note.type === 'document' && <Upload className="w-5 h-5 text-white" />}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="font-semibold text-gray-900 dark:text-white truncate group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                                      {note.title}
+                                    </h4>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                                      {note.updatedAt.toLocaleDateString()}
+                                    </p>
+                                  </div>
+                                </div>
+                                {note.isStarred && (
+                                  <Star className="w-5 h-5 text-yellow-500 fill-current animate-pulse" />
+                                )}
+                              </div>
+                              <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-2 mb-4">
+                                {note.content.substring(0, 120)}...
+                              </p>
+                              <div className="flex items-center justify-between">
+                                <span className="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs rounded-full font-medium">
+                                  {note.category}
+                                </span>
+                                <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
+                                  {note.tags.slice(0, 2).map((tag, i) => (
+                                    <span key={i} className="flex items-center space-x-1">
+                                      <Tag className="w-3 h-3" />
+                                      <span>{tag}</span>
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      )}
+                    </motion.div>
+
+                    {/* AI Insights Dashboard */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 30 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.8 }}
+                      className="card-base rounded-premium-xl bg-gradient-to-r from-indigo-500/10 to-purple-500/10 dark:from-indigo-500/20 dark:to-purple-500/20 border-indigo-200/30 dark:border-indigo-500/30"
+                    >
+                      <div className="flex items-center space-x-3 mb-6">
+                        <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center animate-neural-pulse">
+                          <Sparkles className="w-5 h-5 text-white" />
+                        </div>
+                        <h3 className="hierarchy-3 text-gray-900 dark:text-white">AI Insights</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="text-center p-4 bg-white/50 dark:bg-gray-800/50 rounded-xl">
+                          <div className="text-3xl font-bold gradient-text mb-2">
+                            {Math.round((notes.filter(n => n.summary).length / Math.max(notes.length, 1)) * 100)}%
+                          </div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400">Notes with AI summaries</div>
+                        </div>
+                        <div className="text-center p-4 bg-white/50 dark:bg-gray-800/50 rounded-xl">
+                          <div className="text-3xl font-bold gradient-text-secondary mb-2">
+                            {notes.filter(n => n.type === 'audio' && n.transcription).length}
+                          </div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400">Transcribed recordings</div>
+                        </div>
+                        <div className="text-center p-4 bg-white/50 dark:bg-gray-800/50 rounded-xl">
+                          <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-2">
+                            {Array.from(new Set(notes.flatMap(n => n.tags))).length}
+                          </div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400">Unique tags created</div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+
+                {/* Notes Tab */}
+                {activeTab === 'notes' && (
+                  <motion.div
+                    key="notes"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="space-y-6"
+                  >
+                    {/* Notes Header */}
+                    <div className="card-base rounded-premium-xl">
+                      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                        <div>
+                          <h2 className="hierarchy-2 text-gray-900 dark:text-white">All Notes</h2>
+                          <p className="text-gray-600 dark:text-gray-400">{filteredNotes.length} notes found</p>
+                        </div>
+                        
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                          <select
+                            value={selectedCategory}
+                            onChange={(e) => setSelectedCategory(e.target.value)}
+                            className="form-control"
+                          >
+                            {categories.map(category => (
+                              <option key={category} value={category}>
+                                {category === 'all' ? 'All Categories' : category}
+                              </option>
+                            ))}
+                          </select>
+                          
+                          <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+                            <button
+                              onClick={() => setViewMode('grid')}
+                              className={`p-2 rounded-lg transition-all ${
+                                viewMode === 'grid'
+                                  ? 'bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 shadow-sm'
+                                  : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+                              }`}
+                            >
+                              <Grid className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setViewMode('list')}
+                              className={`p-2 rounded-lg transition-all ${
+                                viewMode === 'list'
+                                  ? 'bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 shadow-sm'
+                                  : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+                              }`}
+                            >
+                              <List className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Stats Cards */}
-                  <StatsCards stats={stats} />
-
-                  {/* Quick Actions */}
-                  <QuickActions
-                    onCreateNote={() => setShowCreateModal(true)}
-                    onStartRecording={startRecording}
-                    onFileUpload={() => setActiveTab('upload')}
-                    onOpenChat={() => setActiveTab('chat')}
-                    isRecording={isRecording}
-                  />
-
-                  {/* Recent Activity */}
-                  <div className="bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl border border-gray-200 dark:border-gray-800 rounded-2xl p-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center space-x-3">
-                        <Clock className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Recent Activity</h3>
-                      </div>
-                      <button
-                        onClick={() => setActiveTab('notes')}
-                        className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-medium"
+                    {/* Notes Grid/List */}
+                    {filteredNotes.length === 0 ? (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="card-base rounded-premium-xl text-center py-20"
                       >
-                        View All →
-                      </button>
-                    </div>
-                    
-                    {recentNotes.length === 0 ? (
-                      <div className="text-center py-12">
-                        <FileText className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                        <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No notes yet</h4>
-                        <p className="text-gray-600 dark:text-gray-400 mb-4">Create your first note to get started</p>
+                        <Search className="w-20 h-20 text-gray-300 dark:text-gray-600 mx-auto mb-6 animate-float" />
+                        <h3 className="hierarchy-3 text-gray-900 dark:text-white mb-4">No notes found</h3>
+                        <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-md mx-auto">
+                          {searchQuery ? 'Try adjusting your search terms or filters' : 'Create your first note to get started with AI-powered note-taking'}
+                        </p>
                         <button
                           onClick={() => setShowCreateModal(true)}
-                          className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+                          className="btn-base btn-primary hover-lift"
                         >
+                          <Plus className="w-5 h-5" />
                           Create Note
                         </button>
-                      </div>
+                      </motion.div>
                     ) : (
-                      <div className="space-y-3">
-                        {recentNotes.map(note => (
-                          <div
+                      <div className={viewMode === 'grid' 
+                        ? 'content-grid'
+                        : 'space-y-4'
+                      }>
+                        {filteredNotes.map((note, index) => (
+                          <motion.div
                             key={note.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.05 }}
                             onClick={() => handleNoteClick(note)}
-                            className="p-4 bg-gray-50/50 dark:bg-gray-800/30 rounded-lg hover:bg-gray-100/50 dark:hover:bg-gray-700/50 cursor-pointer transition-all duration-200 border border-gray-200/50 dark:border-gray-700/50"
+                            className={`card-premium hover-lift cursor-pointer group ${
+                              viewMode === 'list' ? 'flex items-center space-x-4 p-4' : 'p-6'
+                            }`}
                           >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-2 mb-1">
-                                  {note.type === 'text' && <FileText className="w-4 h-4 text-blue-500" />}
-                                  {note.type === 'audio' && <Mic className="w-4 h-4 text-red-500" />}
-                                  {note.type === 'video' && <Camera className="w-4 h-4 text-green-500" />}
-                                  {note.type === 'document' && <Upload className="w-4 h-4 text-purple-500" />}
-                                  <h4 className="font-medium text-gray-900 dark:text-white">{note.title}</h4>
-                                </div>
-                                <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-                                  {note.content.substring(0, 100)}...
-                                </p>
-                                <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500 dark:text-gray-500">
-                                  <span>{note.updatedAt.toLocaleDateString()}</span>
-                                  <span>{note.category}</span>
-                                  {note.tags.length > 0 && <span>{note.tags.slice(0, 2).join(', ')}</span>}
-                                </div>
+                            {/* Note Type Icon */}
+                            <div className={`${viewMode === 'list' ? 'flex-shrink-0' : 'mb-4'}`}>
+                              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                {note.type === 'text' && <FileText className="w-6 h-6 text-white" />}
+                                {note.type === 'audio' && <Mic className="w-6 h-6 text-white" />}
+                                {note.type === 'video' && <Camera className="w-6 h-6 text-white" />}
+                                {note.type === 'document' && <Upload className="w-6 h-6 text-white" />}
                               </div>
-                              {note.isStarred && (
-                                <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                              )}
                             </div>
-                          </div>
+
+                            {/* Note Content */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between mb-3">
+                                <h3 className="font-semibold text-gray-900 dark:text-white text-lg line-clamp-2 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                                  {note.title}
+                                </h3>
+                                {note.isStarred && (
+                                  <Star className="w-5 h-5 text-yellow-500 fill-current flex-shrink-0 ml-2 animate-pulse" />
+                                )}
+                              </div>
+                              
+                              <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-3 mb-4">
+                                {note.content}
+                              </p>
+
+                              {/* Tags */}
+                              {note.tags.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mb-4">
+                                  {note.tags.slice(0, 3).map((tag, tagIndex) => (
+                                    <span
+                                      key={tagIndex}
+                                      className="inline-flex items-center px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full font-medium"
+                                    >
+                                      <Tag className="w-3 h-3 mr-1" />
+                                      {tag}
+                                    </span>
+                                  ))}
+                                  {note.tags.length > 3 && (
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 px-2 py-1">
+                                      +{note.tags.length - 3} more
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Footer */}
+                              <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                                <span className="flex items-center space-x-1">
+                                  <Calendar className="w-3 h-3" />
+                                  <span>{note.updatedAt.toLocaleDateString()}</span>
+                                </span>
+                                <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full font-medium">
+                                  {note.category}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Hover Actions */}
+                            <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleStar(note.id);
+                                }}
+                                className="p-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-lg shadow-lg hover:scale-110 transition-transform"
+                              >
+                                <Star className={`w-4 h-4 ${note.isStarred ? 'text-yellow-500 fill-current' : 'text-gray-400'}`} />
+                              </button>
+                            </div>
+                          </motion.div>
                         ))}
                       </div>
                     )}
-                  </div>
+                  </motion.div>
+                )}
 
-                  {/* AI Insights */}
-                  <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 dark:from-purple-500/20 dark:to-pink-500/20 backdrop-blur-xl border border-purple-200/30 dark:border-purple-500/30 rounded-2xl p-6">
-                    <div className="flex items-center space-x-3 mb-4">
-                      <Sparkles className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">AI Insights</h3>
+                {/* Chat Tab */}
+                {activeTab === 'chat' && (
+                  <motion.div
+                    key="chat"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="h-[calc(100vh-200px)] lg:h-[calc(100vh-160px)]"
+                  >
+                    <div className="card-base rounded-premium-xl h-full">
+                      <ChatInterface
+                        chatMessages={chatMessages}
+                        chatInput={chatInput}
+                        setChatInput={setChatInput}
+                        onSendMessage={handleSendChatMessage}
+                        isAiTyping={isAiTyping}
+                      />
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                          {Math.round((notes.filter(n => n.summary).length / Math.max(notes.length, 1)) * 100)}%
-                        </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">Notes with AI summaries</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-pink-600 dark:text-pink-400">
-                          {notes.filter(n => n.type === 'audio' && n.transcription).length}
-                        </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">Transcribed recordings</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                          {Array.from(new Set(notes.flatMap(n => n.tags))).length}
-                        </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">Unique tags created</div>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
+                  </motion.div>
+                )}
 
-              {/* Notes Tab */}
-              {activeTab === 'notes' && (
-                <motion.div
-                  key="notes"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="space-y-6"
-                >
-                  {/* Notes Header */}
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">All Notes</h2>
-                      <p className="text-gray-600 dark:text-gray-400">{filteredNotes.length} notes found</p>
-                    </div>
-                    
-                    <div className="flex items-center space-x-4">
-                      <select
-                        value={selectedCategory}
-                        onChange={(e) => setSelectedCategory(e.target.value)}
-                        className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white"
-                      >
-                        {categories.map(category => (
-                          <option key={category} value={category}>
-                            {category === 'all' ? 'All Categories' : category}
-                          </option>
-                        ))}
-                      </select>
-                      
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => setViewMode('grid')}
-                          className={`p-2 rounded-lg transition-colors ${
-                            viewMode === 'grid'
-                              ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'
-                              : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
-                          }`}
-                        >
-                          <Grid className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setViewMode('list')}
-                          className={`p-2 rounded-lg transition-colors ${
-                            viewMode === 'list'
-                              ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'
-                              : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
-                          }`}
-                        >
-                          <List className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                {/* Audio Recorder Tab */}
+                {activeTab === 'recorder' && (
+                  <motion.div
+                    key="recorder"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                  >
+                    <AudioRecorder
+                      isRecording={isRecording}
+                      recordingTime={recordingTime}
+                      onStartRecording={startRecording}
+                      onStopRecording={stopRecording}
+                      audioNotes={audioNotes}
+                      onDeleteAudioNote={handleDeleteNote}
+                      onEditAudioNote={handleSaveNote}
+                      currentTranscription={currentTranscription}
+                      finalTranscription={finalTranscription}
+                      transcriptionSupported={speechToTextService.isWebSpeechSupported()}
+                    />
+                  </motion.div>
+                )}
 
-                  {/* Notes Grid/List */}
-                  {filteredNotes.length === 0 ? (
-                    <div className="text-center py-20">
-                      <Search className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No notes found</h3>
-                      <p className="text-gray-600 dark:text-gray-400 mb-6">
-                        {searchQuery ? 'Try adjusting your search terms' : 'Create your first note to get started'}
-                      </p>
-                      <button
-                        onClick={() => setShowCreateModal(true)}
-                        className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-200"
-                      >
-                        Create Note
-                      </button>
-                    </div>
-                  ) : (
-                    <div className={viewMode === 'grid' 
-                      ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
-                      : 'space-y-4'
-                    }>
-                      {filteredNotes.map(note => (
-                        <motion.div
-                          key={note.id}
-                          layout
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.9 }}
-                          onClick={() => handleNoteClick(note)}
-                          className={`group relative p-6 bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 rounded-2xl cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl hover:border-purple-300/50 dark:hover:border-purple-500/50 ${
-                            viewMode === 'list' ? 'flex items-center space-x-4' : ''
-                          }`}
-                        >
-                          {/* Note Type Icon */}
-                          <div className={`${viewMode === 'list' ? 'flex-shrink-0' : 'mb-4'}`}>
-                            <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-400 rounded-xl flex items-center justify-center shadow-lg">
-                              {note.type === 'text' && <FileText className="w-6 h-6 text-white" />}
-                              {note.type === 'audio' && <Mic className="w-6 h-6 text-white" />}
-                              {note.type === 'video' && <Camera className="w-6 h-6 text-white" />}
-                              {note.type === 'document' && <Upload className="w-6 h-6 text-white" />}
-                            </div>
-                          </div>
+                {/* File Upload Tab */}
+                {activeTab === 'upload' && (
+                  <motion.div
+                    key="upload"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                  >
+                    <FileUpload
+                      onFileUpload={handleFileUpload}
+                      isProcessing={isProcessingFiles}
+                    />
+                  </motion.div>
+                )}
 
-                          {/* Note Content */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between mb-2">
-                              <h3 className="font-semibold text-gray-900 dark:text-white text-lg line-clamp-2">
-                                {note.title}
-                              </h3>
-                              {note.isStarred && (
-                                <Star className="w-5 h-5 text-yellow-500 fill-current flex-shrink-0 ml-2" />
-                              )}
-                            </div>
-                            
-                            <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-3 mb-4">
-                              {note.content}
-                            </p>
+                {/* Smart Search Tab */}
+                {activeTab === 'search' && (
+                  <motion.div
+                    key="search"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                  >
+                    <SmartSearch
+                      notes={notes}
+                      onNoteClick={handleNoteClick}
+                      onToggleStar={handleToggleStar}
+                    />
+                  </motion.div>
+                )}
 
-                            {/* Tags */}
-                            {note.tags.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mb-3">
-                                {note.tags.slice(0, 3).map((tag, index) => (
-                                  <span
-                                    key={index}
-                                    className="inline-flex items-center px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full"
-                                  >
-                                    <Tag className="w-3 h-3 mr-1" />
-                                    {tag}
-                                  </span>
-                                ))}
-                                {note.tags.length > 3 && (
-                                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                                    +{note.tags.length - 3} more
-                                  </span>
-                                )}
-                              </div>
-                            )}
+                {/* Categories Tab */}
+                {activeTab === 'categories' && (
+                  <motion.div
+                    key="categories"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                  >
+                    <Categories
+                      notes={notes}
+                      onNoteClick={handleNoteClick}
+                      onToggleStar={handleToggleStar}
+                      onCreateCategory={(name) => console.log('Create category:', name)}
+                      onDeleteCategory={(name) => console.log('Delete category:', name)}
+                    />
+                  </motion.div>
+                )}
 
-                            {/* Footer */}
-                            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                              <span className="flex items-center space-x-1">
-                                <Calendar className="w-3 h-3" />
-                                <span>{note.updatedAt.toLocaleDateString()}</span>
-                              </span>
-                              <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full">
-                                {note.category}
-                              </span>
-                            </div>
-                          </div>
+                {/* Starred Notes Tab */}
+                {activeTab === 'starred' && (
+                  <motion.div
+                    key="starred"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                  >
+                    <StarredNotes
+                      notes={starredNotes}
+                      onNoteClick={handleNoteClick}
+                      onToggleStar={handleToggleStar}
+                    />
+                  </motion.div>
+                )}
 
-                          {/* Hover Actions */}
-                          <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleToggleStar(note.id);
-                              }}
-                              className="p-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-lg hover:scale-110 transition-transform"
-                            >
-                              <Star className={`w-4 h-4 ${note.isStarred ? 'text-yellow-500 fill-current' : 'text-gray-400'}`} />
-                            </button>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  )}
-                </motion.div>
-              )}
+                {/* AI Quiz Tab */}
+                {activeTab === 'quiz' && (
+                  <motion.div
+                    key="quiz"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                  >
+                    <AIQuiz />
+                  </motion.div>
+                )}
 
-              {/* Chat Tab */}
-              {activeTab === 'chat' && (
-                <motion.div
-                  key="chat"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="h-[calc(100vh-200px)]"
-                >
-                  <ChatInterface
-                    chatMessages={chatMessages}
-                    chatInput={chatInput}
-                    setChatInput={setChatInput}
-                    onSendMessage={handleSendChatMessage}
-                    isAiTyping={isAiTyping}
-                  />
-                </motion.div>
-              )}
+                {/* YouTube Summarizer Tab */}
+                {activeTab === 'youtube' && (
+                  <motion.div
+                    key="youtube"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                  >
+                    <YoutubeSummarizer />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </main>
+        </div>
+      </div>
 
-              {/* Audio Recorder Tab */}
-              {activeTab === 'recorder' && (
-                <motion.div
-                  key="recorder"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                >
-                  <AudioRecorder
-                    isRecording={isRecording}
-                    recordingTime={recordingTime}
-                    onStartRecording={startRecording}
-                    onStopRecording={stopRecording}
-                    audioNotes={audioNotes}
-                    onDeleteAudioNote={handleDeleteNote}
-                    onEditAudioNote={handleSaveNote}
-                    currentTranscription={currentTranscription}
-                    finalTranscription={finalTranscription}
-                    transcriptionSupported={speechToTextService.isWebSpeechSupported()}
-                  />
-                </motion.div>
-              )}
-
-              {/* File Upload Tab */}
-              {activeTab === 'upload' && (
-                <motion.div
-                  key="upload"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                >
-                  <FileUpload
-                    onFileUpload={handleFileUpload}
-                    isProcessing={isProcessingFiles}
-                  />
-                </motion.div>
-              )}
-
-              {/* Smart Search Tab */}
-              {activeTab === 'search' && (
-                <motion.div
-                  key="search"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                >
-                  <SmartSearch
-                    notes={notes}
-                    onNoteClick={handleNoteClick}
-                    onToggleStar={handleToggleStar}
-                  />
-                </motion.div>
-              )}
-
-              {/* Categories Tab */}
-              {activeTab === 'categories' && (
-                <motion.div
-                  key="categories"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                >
-                  <Categories
-                    notes={notes}
-                    onNoteClick={handleNoteClick}
-                    onToggleStar={handleToggleStar}
-                    onCreateCategory={(name) => console.log('Create category:', name)}
-                    onDeleteCategory={(name) => console.log('Delete category:', name)}
-                  />
-                </motion.div>
-              )}
-
-              {/* Starred Notes Tab */}
-              {activeTab === 'starred' && (
-                <motion.div
-                  key="starred"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                >
-                  <StarredNotes
-                    notes={starredNotes}
-                    onNoteClick={handleNoteClick}
-                    onToggleStar={handleToggleStar}
-                  />
-                </motion.div>
-              )}
-
-              {/* AI Quiz Tab */}
-              {activeTab === 'quiz' && (
-                <motion.div
-                  key="quiz"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                >
-                  <AIQuiz />
-                </motion.div>
-              )}
-
-              {/* YouTube Summarizer Tab */}
-              {activeTab === 'youtube' && (
-                <motion.div
-                  key="youtube"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                >
-                  <YoutubeSummarizer />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </main>
+      {/* Mobile Bottom Navigation */}
+      <div className="lg:hidden mobile-nav">
+        <div className="flex items-center justify-around py-2">
+          {[
+            { id: 'dashboard', icon: TrendingUp, label: 'Home' },
+            { id: 'notes', icon: FileText, label: 'Notes' },
+            { id: 'chat', icon: MessageSquare, label: 'AI Chat' },
+            { id: 'recorder', icon: Mic, label: 'Record' }
+          ].map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`flex flex-col items-center space-y-1 p-2 rounded-lg transition-all ${
+                activeTab === item.id
+                  ? 'text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30'
+                  : 'text-gray-600 dark:text-gray-400'
+              }`}
+            >
+              <item.icon className="w-5 h-5" />
+              <span className="text-xs font-medium">{item.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Modals */}
@@ -930,15 +1134,22 @@ function Dashboard() {
 
       {/* Floating Action Button */}
       <motion.button
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        whileHover={{ scale: 1.1 }}
+        initial={{ scale: 0, rotate: -180 }}
+        animate={{ scale: 1, rotate: 0 }}
+        whileHover={{ scale: 1.1, rotate: 5 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => setShowCreateModal(true)}
-        className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 flex items-center justify-center z-40"
+        className="fixed bottom-6 right-6 lg:bottom-8 lg:right-8 w-14 h-14 lg:w-16 lg:h-16 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full shadow-premium hover:shadow-glow transition-all duration-300 flex items-center justify-center z-30 group"
       >
-        <Plus className="w-8 h-8" />
+        <Plus className="w-6 h-6 lg:w-8 lg:h-8 group-hover:rotate-90 transition-transform duration-300" />
       </motion.button>
+
+      {/* Background Decorative Elements */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-purple-400/30 rounded-full animate-float"></div>
+        <div className="absolute top-3/4 right-1/4 w-1 h-1 bg-pink-400/30 rounded-full animate-float delay-1000"></div>
+        <div className="absolute bottom-1/4 left-1/3 w-1.5 h-1.5 bg-blue-400/30 rounded-full animate-float delay-2000"></div>
+      </div>
     </div>
   );
 }

@@ -270,16 +270,16 @@ function AuthPage({ onBackToLanding }: AuthPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 text-white relative overflow-hidden">
       {/* Premium Background */}
-      <div className="fixed inset-0 bg-gradient-to-br from-purple-900/30 via-black to-pink-900/30" />
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-900/20 via-transparent to-transparent" />
+      <div className="fixed inset-0 bg-gradient-to-br from-purple-900/40 via-indigo-900/30 to-pink-900/40" />
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-500/20 via-transparent to-transparent" />
       
       {/* Animated Mesh Gradient */}
-      <div className="fixed inset-0 opacity-30">
-        <div className="absolute top-0 -left-4 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl animate-blob"></div>
-        <div className="absolute top-0 -right-4 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"></div>
-        <div className="absolute -bottom-8 left-20 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-4000"></div>
+      <div className="fixed inset-0 opacity-40">
+        <div className="absolute top-0 -left-4 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob-morph"></div>
+        <div className="absolute top-0 -right-4 w-96 h-96 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob-morph delay-1000"></div>
+        <div className="absolute -bottom-8 left-20 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob-morph delay-2000"></div>
       </div>
 
       {/* Floating Elements */}
@@ -346,28 +346,43 @@ function AuthPage({ onBackToLanding }: AuthPageProps) {
 
         {/* Right Side - Premium Auth Form */}
         <div className="w-full lg:w-1/2 flex items-center justify-center px-4 py-12 relative">
-          <div className={`w-full max-w-md transform transition-all duration-1000 ${isVisible ? 'translate-x-0 opacity-100' : 'translate-x-10 opacity-0'}`}>
-            <div className="bg-gray-900/80 backdrop-blur-2xl border border-gray-700/50 rounded-3xl p-10 shadow-2xl relative overflow-hidden">
+          <motion.div 
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="w-full max-w-md"
+          >
+            <div className="card-premium rounded-premium-xl p-10 shadow-premium relative overflow-hidden">
               {/* Subtle Inner Glow */}
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-pink-500/5 rounded-3xl"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-transparent to-pink-500/10 rounded-premium-xl"></div>
               
               <div className="relative z-10">
                 {/* Mobile Logo */}
-                <div className="lg:hidden flex items-center justify-center space-x-3 mb-8">
-                  <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-400 rounded-xl flex items-center justify-center">
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.3 }}
+                  className="lg:hidden flex items-center justify-center space-x-3 mb-8"
+                >
+                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
                     <Bot className="w-7 h-7 text-white" />
                   </div>
-                  <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                  <h1 className="text-2xl font-bold gradient-text">
                     SmaRta
                   </h1>
-                </div>
+                </motion.div>
 
                 {/* Header */}
-                <div className="text-center mb-10">
-                  <h2 className="text-3xl font-bold text-white mb-3">
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="text-center mb-10"
+                >
+                  <h2 className="hierarchy-2 text-white mb-3">
                     {isLogin ? 'Welcome Back' : 'Create Your Account'}
                   </h2>
-                  <p className="text-gray-400 text-lg">
+                  <p className="text-white/70 text-lg">
                     {isLogin 
                       ? 'Sign in to access your AI-powered notes' 
                       : 'Get started with SmaRta AI Notes - it\'s free!'
@@ -378,42 +393,57 @@ function AuthPage({ onBackToLanding }: AuthPageProps) {
                       <p className="text-purple-300">{errors.form}</p>
                     </div>
                   )}
-                </div>
+                </motion.div>
 
                 {/* Social Login Buttons */}
-                <div className="mb-6">
-                  <button
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="mb-6"
+                >
+                  <motion.button
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    whileTap={{ scale: 0.98 }}
                     type="button"
                     onClick={() => handleSocialLogin('google')}
                     disabled={authLoading}
-                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 mb-3 bg-white text-gray-900 rounded-lg font-semibold border border-gray-300 hover:bg-gray-100 transition-colors disabled:opacity-50"
+                    className="w-full flex items-center justify-center space-x-3 px-6 py-4 mb-4 bg-white text-gray-900 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50"
                   >
-                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5 mr-2" />
+                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
                     <span>Continue with Google</span>
-                  </button>
-
-                </div>
+                  </motion.button>
+                </motion.div>
 
                 {/* Form */}
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <motion.form 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 }}
+                  onSubmit={handleSubmit} 
+                  className="space-y-6"
+                >
                   {/* Full Name (Sign Up Only) */}
                   {!isLogin && (
-                    <div>
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                    >
                       <label className="block text-sm font-semibold text-gray-300 mb-3">
                         Full Name
                       </label>
-                      <div className="relative group">
+                      <div className="relative">
                         <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-purple-400 transition-colors" />
                         <input
                           type="text"
                           value={formData.fullName || ''}
                           onChange={(e) => handleInputChange('fullName', e.target.value)}
-                          className={`w-full pl-12 pr-4 py-4 bg-gray-800/50 border rounded-xl text-white placeholder-gray-400 focus:outline-none transition-all duration-300 form-input ${
-                            errors.fullName ? 'border-red-500 focus:border-red-400' : 'border-gray-600 focus:border-purple-500 focus:bg-gray-800/70'
+                          className={`w-full pl-12 pr-4 py-4 form-premium focus-premium ${
+                            errors.fullName ? 'border-red-500 focus:border-red-400' : ''
                           }`}
                           placeholder="Enter your full name"
                         />
-                        <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-purple-500/0 via-purple-500/0 to-pink-500/0 group-focus-within:from-purple-500/10 group-focus-within:via-purple-500/5 group-focus-within:to-pink-500/10 transition-all duration-300 pointer-events-none"></div>
                       </div>
                       {errors.fullName && (
                         <div className="flex items-center space-x-2 mt-3 text-red-400 text-sm">
@@ -421,7 +451,7 @@ function AuthPage({ onBackToLanding }: AuthPageProps) {
                           <span>{errors.fullName}</span>
                         </div>
                       )}
-                    </div>
+                    </motion.div>
                   )}
 
                   {/* Email */}
@@ -429,18 +459,17 @@ function AuthPage({ onBackToLanding }: AuthPageProps) {
                     <label className="block text-sm font-semibold text-gray-300 mb-3">
                       Email Address
                     </label>
-                    <div className="relative group">
+                    <div className="relative">
                       <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-purple-400 transition-colors" />
                       <input
                         type="email"
                         value={formData.email}
                         onChange={(e) => handleInputChange('email', e.target.value)}
-                        className={`w-full pl-12 pr-4 py-4 bg-gray-800/50 border rounded-xl text-white placeholder-gray-400 focus:outline-none transition-all duration-300 form-input ${
-                          errors.email ? 'border-red-500 focus:border-red-400' : 'border-gray-600 focus:border-purple-500 focus:bg-gray-800/70'
+                        className={`w-full pl-12 pr-4 py-4 form-premium focus-premium ${
+                          errors.email ? 'border-red-500 focus:border-red-400' : ''
                         }`}
                         placeholder="Enter your email"
                       />
-                      <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-purple-500/0 via-purple-500/0 to-pink-500/0 group-focus-within:from-purple-500/10 group-focus-within:via-purple-500/5 group-focus-within:to-pink-500/10 transition-all duration-300 pointer-events-none"></div>
                     </div>
                     {errors.email && (
                       <div className="flex items-center space-x-2 mt-3 text-red-400 text-sm">
@@ -532,15 +561,17 @@ function AuthPage({ onBackToLanding }: AuthPageProps) {
                   )}
 
                   {/* Submit Button */}
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    whileTap={{ scale: 0.98 }}
                     type="submit"
-                    className="group relative w-full py-4 bg-gradient-to-r from-purple-500 via-pink-500 to-purple-600 text-white rounded-xl font-semibold text-lg hover:from-purple-600 hover:via-pink-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-2xl btn-primary overflow-hidden"
+                    className="btn-base btn-premium w-full py-4 text-lg shadow-premium hover:shadow-glow"
                   >
                     <span className="relative z-10 flex items-center justify-center space-x-2">
                       <span>{isLogin ? 'Sign In' : 'Create Account'}</span>
                       <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </span>
-                  </button>
+                  </motion.button>
 
                   {/* Divider */}
                   <div className="relative my-8">
@@ -558,24 +589,26 @@ function AuthPage({ onBackToLanding }: AuthPageProps) {
                       {isLogin ? (
                         <>
                           New to SmaRta? 
-                          <button
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
                             type="button"
                             onClick={toggleAuthMode}
-                            className="ml-2 text-purple-400 hover:text-purple-300 font-semibold transition-colors"
+                            className="ml-2 text-purple-400 hover:text-purple-300 font-semibold transition-colors underline-offset-4 hover:underline"
                           >
                             Create an account →
-                          </button>
+                          </motion.button>
                         </>
                       ) : (
                         <>
                           Already have an account?
-                          <button
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
                             type="button"
                             onClick={toggleAuthMode}
-                            className="ml-2 text-purple-400 hover:text-purple-300 font-semibold transition-colors"
+                            className="ml-2 text-purple-400 hover:text-purple-300 font-semibold transition-colors underline-offset-4 hover:underline"
                           >
                             Sign in
-                          </button>
+                          </motion.button>
                         </>
                       )}
                     </p>
@@ -583,18 +616,19 @@ function AuthPage({ onBackToLanding }: AuthPageProps) {
 
                   {/* Back to Landing */}
                   <div className="text-center pt-6">
-                    <button
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
                       type="button"
                       onClick={onBackToLanding}
-                      className="text-sm text-gray-400 hover:text-white transition-colors"
+                      className="text-sm text-gray-400 hover:text-white transition-colors underline-offset-4 hover:underline"
                     >
                       ← Back to homepage
-                    </button>
+                    </motion.button>
                   </div>
-                </form>
+                </motion.form>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     </div>

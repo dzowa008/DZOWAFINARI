@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Bot, 
   Mic, 
@@ -158,12 +159,25 @@ function LandingPage({ onGetStarted }: LandingPageProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-x-hidden">
-      {/* Background Elements */}
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-900/20 via-transparent to-transparent pointer-events-none" />
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 text-white relative overflow-hidden">
+      {/* Premium Background */}
+      <div className="fixed inset-0 bg-gradient-to-br from-purple-900/40 via-indigo-900/30 to-pink-900/40" />
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-500/20 via-transparent to-transparent" />
+      
+      {/* Animated Mesh Gradient */}
+      <div className="fixed inset-0 opacity-40">
+        <div className="absolute top-0 -left-4 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob-morph"></div>
+        <div className="absolute top-0 -right-4 w-96 h-96 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob-morph delay-1000"></div>
+        <div className="absolute -bottom-8 left-20 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob-morph delay-2000"></div>
+      </div>
+
+      {/* Floating Elements */}
+      <div className="absolute top-1/4 left-10 w-20 h-20 bg-purple-500/10 rounded-full blur-xl animate-pulse"></div>
+      <div className="absolute top-1/3 right-10 w-32 h-32 bg-pink-500/10 rounded-full blur-xl animate-pulse delay-1000"></div>
+      <div className="absolute bottom-1/4 left-1/4 w-16 h-16 bg-blue-500/10 rounded-full blur-xl animate-pulse delay-2000"></div>
 
       {/* Navigation */}
-      <nav className="relative z-50 bg-black/50 backdrop-blur-xl border-b border-gray-800">
+      <nav className="relative z-50 bg-white/10 dark:bg-black/30 backdrop-blur-xl border-b border-white/20 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-3">
@@ -180,13 +194,13 @@ function LandingPage({ onGetStarted }: LandingPageProps) {
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
-              <a href="#features" className="text-gray-300 hover:text-white transition-colors">Features</a>
-              <a href="#testimonials" className="text-gray-300 hover:text-white transition-colors">Testimonials</a>
-              <a href="#pricing" className="text-gray-300 hover:text-white transition-colors">Pricing</a>
-              <a href="#contact" className="text-gray-300 hover:text-white transition-colors">Contact</a>
+              <a href="#features" className="text-white/80 hover:text-white transition-colors font-medium">Features</a>
+              <a href="#testimonials" className="text-white/80 hover:text-white transition-colors font-medium">Testimonials</a>
+              <a href="#pricing" className="text-white/80 hover:text-white transition-colors font-medium">Pricing</a>
+              <a href="#contact" className="text-white/80 hover:text-white transition-colors font-medium">Contact</a>
               <button
                 onClick={onGetStarted}
-                className="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-200 transform hover:scale-105"
+                className="btn-base btn-premium hover-lift shadow-glow"
               >
                 Get Started
               </button>
@@ -224,47 +238,84 @@ function LandingPage({ onGetStarted }: LandingPageProps) {
       {/* Hero Section */}
       <section className="relative pt-20 pb-32 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className={`text-center transform transition-all duration-1000 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-            <div className="inline-flex items-center px-4 py-2 bg-purple-500/10 border border-purple-500/20 rounded-full text-purple-300 text-sm mb-8">
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-center"
+          >
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 }}
+              className="inline-flex items-center px-6 py-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full text-white text-sm mb-8 shadow-lg"
+            >
               <Sparkles className="w-4 h-4 mr-2" />
               Introducing AI-Powered Note Taking
-            </div>
+            </motion.div>
             
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent leading-tight">
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="text-display font-bold mb-6 bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent leading-tight"
+            >
               Your Notes,
               <br />
               <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
                 Supercharged by AI
               </span>
-            </h1>
+            </motion.h1>
             
-            <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed">
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="text-headline text-white/80 mb-12 max-w-4xl mx-auto leading-relaxed"
+            >
               Transform how you capture, organize, and interact with information. 
               SmaRta uses advanced AI to make your notes intelligent, searchable, and actionable.
-            </p>
+            </motion.p>
             
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-              <button
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-20"
+            >
+              <motion.button
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={onGetStarted}
-                className="group px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full font-semibold text-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200 transform hover:scale-105 flex items-center space-x-2"
+                className="group px-10 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full font-bold text-lg shadow-premium hover:shadow-glow transition-all duration-300 flex items-center space-x-3"
               >
                 <span>Start Free Trial</span>
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </button>
-              
-
-            </div>
+                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -skew-x-12 transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+              </motion.button>
+            </motion.div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-2xl mx-auto">
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto"
+            >
               {stats.map((stat, index) => (
-                <div key={index} className="text-center">
-                  <div className="text-3xl md:text-4xl font-bold text-white mb-2">{stat.number}</div>
-                  <div className="text-gray-400 text-sm">{stat.label}</div>
-                </div>
+                <motion.div 
+                  key={index}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.7 + index * 0.1 }}
+                  className="text-center p-4 bg-white/5 backdrop-blur-xl rounded-xl border border-white/10"
+                >
+                  <div className="text-4xl md:text-5xl font-bold text-white mb-2 gradient-text">{stat.number}</div>
+                  <div className="text-white/70 text-sm font-medium">{stat.label}</div>
+                </motion.div>
               ))}
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
 
         {/* Floating Elements */}
@@ -276,60 +327,111 @@ function LandingPage({ onGetStarted }: LandingPageProps) {
       {/* Features Section */}
       <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 relative">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-headline font-bold text-white mb-6">
               Powerful Features for
               <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent"> Modern Productivity</span>
             </h2>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+            <p className="text-body text-white/80 max-w-4xl mx-auto">
               Experience the future of note-taking with AI-powered features designed to enhance your workflow
             </p>
-          </div>
+          </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="content-grid">
             {features.map((feature, index) => (
-              <div
+              <motion.div
                 key={index}
-                className="group bg-gray-900/50 backdrop-blur-xl border border-gray-800 rounded-2xl p-8 hover:border-purple-500/50 transition-all duration-300 hover:transform hover:scale-105"
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ y: -8, scale: 1.02 }}
+                className="group card-premium p-8 hover:border-purple-500/50 transition-all duration-300"
               >
-                <div className="w-16 h-16 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                  <feature.icon className="w-8 h-8 text-purple-400" />
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-premium flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
+                  <feature.icon className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-4">{feature.title}</h3>
-                <p className="text-gray-300 leading-relaxed">{feature.description}</p>
-              </div>
+                <h3 className="text-xl font-semibold text-white mb-4 group-hover:text-purple-300 transition-colors">{feature.title}</h3>
+                <p className="text-white/70 leading-relaxed">{feature.description}</p>
+                
+                {/* Hover Glow Effect */}
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 to-pink-500/0 group-hover:from-purple-500/10 group-hover:to-pink-500/10 rounded-premium transition-all duration-300 -z-10"></div>
+              </motion.div>
             ))}
           </div>
         </div>
       </section>
 
       {/* Demo Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-purple-900/10 to-pink-900/10">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-purple-900/20 to-pink-900/20 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-headline font-bold text-white mb-6">
               See SmaRta in Action
             </h2>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+            <p className="text-body text-white/80 max-w-3xl mx-auto">
               Watch how AI transforms your note-taking experience
             </p>
-          </div>
+          </motion.div>
 
-          <div className="relative max-w-4xl mx-auto">
-          <video autoPlay muted loop  src="../smarta.mp4"></video>
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            className="relative max-w-5xl mx-auto"
+          >
+            <div className="relative bg-gradient-to-br from-gray-900/50 to-gray-800/50 backdrop-blur-xl border border-white/20 rounded-premium-xl p-8 shadow-premium">
+              <div className="aspect-video bg-gradient-to-br from-purple-900/30 to-pink-900/30 rounded-premium flex items-center justify-center">
+                <div className="text-center">
+                  <Brain className="w-20 h-20 text-white/50 mx-auto mb-4 animate-pulse-glow" />
+                  <h3 className="text-2xl font-bold text-white mb-2">Interactive Demo</h3>
+                  <p className="text-white/70">Experience the power of AI-driven note-taking</p>
+                  <button
+                    onClick={onGetStarted}
+                    className="mt-6 btn-base btn-premium hover-lift"
+                  >
+                    Try It Now
+                  </button>
+                </div>
+              </div>
+            </div>
 
             {/* Floating UI Elements */}
-            <div className="absolute -top-4 -left-4 bg-purple-500/20 backdrop-blur-xl border border-purple-500/30 rounded-lg p-3 animate-float">
-              <Mic className="w-6 h-6 text-purple-400" onClick={onGetStarted} />
-              
-            </div>
-            <div className="absolute -top-4 -right-4 bg-pink-500/20 backdrop-blur-xl border border-pink-500/30 rounded-lg p-3 animate-float delay-1000">
-              <Brain className="w-6 h-6 text-pink-400"onClick={onGetStarted} />
-            </div>
-            <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 bg-blue-500/20 backdrop-blur-xl border border-blue-500/30 rounded-lg p-3 animate-float delay-2000">
-              <MessageSquare className="w-6 h-6 text-blue-400" onClick={onGetStarted}/>
-            </div>
-          </div>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.8 }}
+              className="absolute -top-6 -left-6 bg-purple-500/30 backdrop-blur-xl border border-purple-500/50 rounded-premium p-4 animate-float shadow-lg"
+            >
+              <Mic className="w-6 h-6 text-purple-300" />
+            </motion.div>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 1.0 }}
+              className="absolute -top-6 -right-6 bg-pink-500/30 backdrop-blur-xl border border-pink-500/50 rounded-premium p-4 animate-float delay-1000 shadow-lg"
+            >
+              <Brain className="w-6 h-6 text-pink-300" />
+            </motion.div>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 1.2 }}
+              className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 bg-blue-500/30 backdrop-blur-xl border border-blue-500/50 rounded-premium p-4 animate-float delay-2000 shadow-lg"
+            >
+              <MessageSquare className="w-6 h-6 text-blue-300" />
+            </motion.div>
+          </motion.div>
         </div>
       </section>
 
